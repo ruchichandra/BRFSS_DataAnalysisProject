@@ -1,0 +1,178 @@
+---
+title: "Exploring and Analysing BRFSS data"
+output:
+  html_document:
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+  pdf_document: default
+---
+
+## Setup
+Load packages ggplot2 and dplyr 
+Load data provided 'brfss2013'
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+```{r load-data}
+load("brfss2013.RData")
+```
+* * *
+
+## Part 1: Data
+The Behavioral Risk Factor Surveillance System (BRFSS) is the nation's premier system of health-related telephone surveys that collect state data about U.S. residents regarding their health-related risk behaviors, chronic health conditions, and use of preventive services. 
+The interviewers collect data from randomly selected adult in a household in conducting BRFSS landline telephone survey and from an adult who participates by using a cellular telephone and resides in a private residence or college housing.
+BRFSS data was collectd through the random phone call surveys for non-institutionalized population., therefore the findings are generalized to US population that has either a landline telephone or cellular phone. This study is not generalized to those instituitionalized or those without telephones. 
+Since all the data was collected (observed), this study is not based on any random experiment, hence there is no causal inference.
+
+* * *
+```{r check the structure of data frame}
+str(brfss2013)
+```
+```{r check dimensions of data frame}
+dim(brfss2013)
+```
+```{r check names of variables}
+names(brfss2013)
+```
+
+## Part 2: Research questions
+
+**Research quesion 1:**
+What is the relationship between education and income level? 
+
+**Research quesion 2:**
+What is the impact of number of hours slept on general health of males and females?
+
+**Research quesion 3:**
+In year 2013, what percent of males and females got the flushots in the month of November?
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+
+**Research quesion 1:**
+
+```{r What is the relationship between education and income level? Selected the desired variables.}
+  
+study1<-brfss2013 %>% 
+  select(income2, educa)
+```
+
+```{r Filter the observations which have value NA}
+
+study1_NAremoved <- study1 %>% 
+  filter(!is.na(educa)) %>% 
+  filter(!is.na(income2)) 
+```
+
+```{r created a new variable college_graduate to divide the data into two groups - College gratuate or Not college graduate}
+
+study1_NAremoved <- study1_NAremoved %>%
+  mutate(College_graduate = ifelse(educa == "College 4 years or more (College graduate)", "Colledge graduate", "Not colledge graduate")) 
+```
+
+```{r plot the variables to find the association between education and income }
+
+ggplot(study1_NAremoved, aes(income2, fill = College_graduate))+geom_bar(position = "stack")
+```
+From above plot it can be configured that income is dependent on the level of education. Those who are College graduate they fall in the higher income range.
+
+
+* * *
+
+
+**Research quesion 2:**
+
+```{r What is the impact of number of hours slept on general health of males and females? selected only desired variables.}
+
+study2<-brfss2013 %>% 
+  select(sleptim1, physhlth, sex)
+```
+
+```{r Filter those observations which have value NA}
+
+study2_NAremoved <- study2 %>%
+  filter(!is.na(sleptim1)) %>%
+  filter(!is.na(physhlth)) %>%
+   filter(!is.na(sex))
+```
+
+```{r created a new variable sleep-status to divide the data into two groups - optimum and non optimum. When number of hours of sleep are greater than or equal to 7 and less than 10, otherwise  non optimum. }
+
+study2_NAremoved <- study2_NAremoved %>%
+  mutate(sleep_status = ifelse(sleptim1 >= 7 & sleptim1 <= 10, "optimum", "non optimum"))
+```
+
+```{r summarized the data by grouping of sleep status and sex}
+
+study2_NAremoved %>% 
+  group_by(sleep_status, sex) %>%  summarise(mean_physhlth = mean(physhlth), sd_physhlth = sd(physhlth), n = n())
+```
+
+```{r Visualize the impact of sleep status on general health of both the genders male and female.}
+
+ggplot(study2_NAremoved, aes(x = sleep_status, y = physhlth)) + geom_boxplot() + facet_wrap(~sex)
+
+
+```
+The above plots indicate that those who have optimum hours of sleep more than or equal  to 7 hours and less than 10 hours, their physical health is very good for both males and females.
+
+
+* * *
+
+
+**Research quesion 3:**
+
+```{r In year 2013, what percent of males and females got the flushots in the month of November? Select desired variable for this study #3.}
+
+study3 <- brfss2013 %>%
+  select(imonth, sex, flushot6)
+```
+
+```{r Filter observations which have value NA}
+
+study3_NAremoved <- study3 %>%
+  filter(!is.na(imonth)) %>%
+  filter(!is.na(sex)) %>%
+   filter(!is.na(flushot6))
+```
+
+```{r filter the observations by month }
+
+study3_November <- study3_NAremoved %>%
+  filter(imonth == "November")
+
+```
+
+```{r count the numbers of males and females according to flushot status}
+
+study3_November %>%
+    count(flushot6, sex)
+
+```
+
+```{r calculate the percentage of males who got flushots in November 2013}
+
+6554 / (6554 + 9227) 
+```
+Approx. 41% males got the flushots in November 2013.
+
+```{r calculate the percentage of females who got flushots in November 2013}
+
+10324 / (10324 + 12009)
+```
+Approx. 46% females got the flushots in November 2013.
+
+```{r plot the observations for the month of November for both genders}
+
+ggplot(study3_November, aes(sex, fill = flushot6)) + geom_bar()
+```
+This plot and the calculation indicates that indicates that in November 2013, more females got the flushots that males.
